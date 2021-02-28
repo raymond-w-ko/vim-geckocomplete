@@ -2,6 +2,7 @@ from importlib.util import find_spec
 import sys
 
 from geckocomplete.geckocomplete import Geckocomplete
+from geckocomplete.utils import log
 
 if find_spec("yarp"):
     import vim  # pylint: disable=import-error
@@ -17,16 +18,29 @@ if hasattr(vim, "plugin"):
             self._geckocomplete = Geckocomplete(self._vim)
 
         @vim.function("Geckocomplete_init", sync=True)
-        def init(self, args):
+        def init(self, _args):
             pass
 
-        @vim.autocmd("BufReadPost,BufLeave,InsertEnter", pattern="*", sync=True)
-        def sync_current_buffer(self):
-            self._geckocomplete.sync_current_buffer()
+        @vim.autocmd("BufReadPost", pattern="*", sync=True)
+        def on_buf_read_post(self):
+            self._geckocomplete.merge_current_buffer("BufReadPost")
 
-        @vim.autocmd("BufDelete", pattern="*", sync=True)
-        def delete_current_buffer(self):
-            self._geckocomplete.delete_current_buffer()
+        @vim.autocmd("BufLeave", pattern="*", sync=True)
+        def on_buf_leave(self):
+            self._geckocomplete.merge_current_buffer("BufLeave")
+
+        @vim.autocmd("InsertEnter", pattern="*", sync=True)
+        def on_insert_enter(self):
+            self._geckocomplete.merge_current_buffer("InsertEnter")
+
+        @vim.function("Geckocomplete_delete_buffer", sync=True)
+        def delete_buffer(self, args):
+            bufnum = int(args[0])
+            self._geckocomplete.delete_buffer(bufnum)
+
+        @vim.function("Geckocomplete_get_completions", sync=True)
+        def get_completions(self, _args):
+            return self._geckocomplete.get_completions()
 
 
 if find_spec("yarp"):

@@ -101,7 +101,6 @@
 (defn complete [{:as state :keys [words]} needle]
   (cond-xlet
    :let [word-set (set (keys words))]
-   (contains? word-set needle) []
    :let [in (to-chan! word-set)
         out (chan)
         xf (score-word-using-needle needle)]
@@ -110,7 +109,13 @@
          completions (->> (sort-by (fn [{:keys [score word]}] [(- score) word]) words)
                           (take 10)
                           (vec))]
-   :return (mapv format-completion completions (range))))
+
+   ;; we are only matching ourselves, abort!
+   (and (= 1 (count completions))
+        (= needle (-> completions first :word)))
+   []
+
+   :return (mapv format-completion completions (range 1 11))))
 
 (defn handle-connection [sock]
   (let [in-stream (.getInputStream sock)

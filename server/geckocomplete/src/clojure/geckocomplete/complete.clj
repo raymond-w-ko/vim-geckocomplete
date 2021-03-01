@@ -1,4 +1,6 @@
 (ns geckocomplete.complete
+  (:import
+   [geckocomplete Algorithm])
   (:require
    [clojure.string :as str]
    [clojure.test :as test :refer [deftest is]]
@@ -104,6 +106,7 @@
    :let []))
 
 (comment
+  (Algorithm/foo)
   (compute-clumping-score "compute-clumping-score" "comcc")
   (compute-clumping-score "compute-clumping-score" "ccscore"))
 

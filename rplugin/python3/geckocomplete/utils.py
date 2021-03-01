@@ -16,16 +16,35 @@ def iskeyword_to_ords(iskeyword):
     tokens = iskeyword.split(",")
     valid_ords = {}
     for tok in tokens:
+        should_include = True
+        if len(tok) > 1 and tok.startswith("^"):
+            should_include = False
+            tok = tok[1:]
         if tok == "@":
             continue
         if "-" not in tok or tok == "-":
-            valid_ords[ord(tok)] = True
+            valid_ords[ord(tok)] = should_include
+        elif tok == "":
+            # artifact of parsing a comma
+            comma_ord = ord(",")
+            valid_ords[comma_ord] = should_include
         else:
             _range = tok.split("-")
-            a = int(_range[0])
-            b = int(_range[1])
+
+            a = _range[0]
+            if a.isdigit():
+                a = int(a)
+            else:
+                a = ord(a)
+
+            b = _range[1]
+            if b.isdigit():
+                b = int(b)
+            else:
+                b = ord(b)
+
             for i in range(a, b+1):
-                valid_ords[i] = True
+                valid_ords[i] = should_include
     return valid_ords
 
 

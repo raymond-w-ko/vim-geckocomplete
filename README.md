@@ -1,1 +1,1 @@
-vim-geckocomplete
+# vim-geckocomplete

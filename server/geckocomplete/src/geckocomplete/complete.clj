@@ -20,6 +20,39 @@
 (defn format-word [word]
   {:word word :score -1.0})
 
+(defn is-negative-score? [{:keys [score]}]
+  (< score 0))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn is-subsequence? [haystack needle]
+  (cond-xlet
+   :let [n-hay (count haystack)
+         n-nee (count needle)]
+   (< n-hay n-nee) false
+   :let [index (loop [i 0 j 0]
+                 (cond-xlet
+                  (<= n-hay i) j
+                  :let [hay-ch (-> (get haystack i) (Character/toLowerCase))]
+                  (<= n-nee j) j
+                  :let [nee-ch (-> (get needle j) (Character/toLowerCase))]
+                  (= hay-ch nee-ch) (recur (inc i) (inc j))
+                  :return (recur (inc i) j)))]
+   :return (= index n-nee)))
+
+(deftest is-subsequence?-test
+  (is (false? (is-subsequence? "a" "abc")))
+  (is (true? (is-subsequence? "abc" "abc")))
+  (is (true? (is-subsequence? "StartRemoteServer" "srs")))
+  (is (true? (is-subsequence? "StartRemoteServer" "temver")))
+  (is (true? (is-subsequence? "StartRemoteServer" "StartRemoteServer")))
+  (is (false? (is-subsequence? "StartRemoteServer" "StartRemoteServerb")))
+  (is (false? (is-subsequence? "StartRemoteServer" "temverb")))
+  (is (false? (is-subsequence? "StartRemoteServer" "srb")))
+  nil)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn compute-word-boundary [{:as m :keys [word]}]
   (cond-xlet
    (<= (count word) 3) (assoc m :word-boundary "")
@@ -63,16 +96,32 @@
     (is (= "osw" (f "OutputStreamWriter")))
     nil))
 
-(defn check-word-boundary-score [needle {:as m :keys [word-boundary score]}]
-  (let [wb-score (and (not= word-boundary "")
-                      (= needle word-boundary)
-                      1.0)]
-    (debug wb-score)
-    (if-not wb-score
-      m
-      (assoc m :score (max score wb-score)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn compute-clumping-score [haystack needle]
+  (cond-xlet
+   (<= (count needle) 2) 0.0
+   :let []))
+
+(comment
+  (compute-clumping-score "compute-clumping-score" "comcc")
+  (compute-clumping-score "compute-clumping-score" "ccscore"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn compute-score [needle {:as m :keys [word word-boundary score]}]
+  (let [subsequence-score (if (is-subsequence? word needle)
+                            (/ (count needle) (count word))
+                            0.0)
+        wb-score (if (is-subsequence? word-boundary needle)
+                   (/ (count needle) (count word-boundary))
+                   0.0)
+        clumping-score 0.0]
+    (comment (compute-clumping-score word needle))
+    (assoc m :score (+ subsequence-score wb-score clumping-score))))
 
 (defn score-word-using-needle [needle]
   (comp (map format-word)
         (map compute-word-boundary)
-        (map (partial check-word-boundary-score needle))))
+        (map (partial compute-score needle))
+        (remove is-negative-score?)))

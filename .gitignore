@@ -1,4 +1,8 @@
+# Clojure
 .nrepl-port
 .lein-repl-history
 .cpcache
+
+# Java
 /server/geckocomplete/target
+*.class

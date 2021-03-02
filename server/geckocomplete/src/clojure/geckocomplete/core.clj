@@ -101,6 +101,20 @@
           (update :words merge-words words)
           (create-word-set)))))
 
+(defn get-buffer-text [in-reader {:keys [num-chars buffer-path]}]
+  (if (<= 0 num-chars)
+    (read-n-chars in-reader num-chars)
+    (slurp buffer-path :encoding "UTF-8")))
+
+(defn handle-merge-buffer-cmd [state in-reader op-args]
+  (let [buffer-text (get-buffer-text in-reader op-args)
+        op-args (-> (assoc op-args :buffer-text buffer-text)
+                    (update :iskeyword-ords set))
+        {:keys [buffer-id buffer-path]} op-args]
+    (assert (number? buffer-id))
+    (debug "merge-buffer" buffer-id buffer-path)
+    (send state merge-buffer op-args)))
+
 (defn handle-connection [sock]
   (let [in-stream (.getInputStream sock)
         out-stream (.getOutputStream sock)
@@ -133,14 +147,7 @@
            (debug "delete-buffer" buffer-id)
            (send state delete-buffer buffer-id))
          "merge-buffer"
-         (let [{:keys [num-chars buffer-path]} op-args
-               buffer-text (read-n-chars in-reader num-chars)
-               op-args (-> (assoc op-args :buffer-text buffer-text)
-                           (update :iskeyword-ords set))
-               {:keys [buffer-id]} op-args]
-           (assert (number? buffer-id))
-           (debug "merge-buffer" buffer-id buffer-path)
-           (send state merge-buffer op-args)) 
+         (handle-merge-buffer-cmd state in-reader op-args)
          "complete"
          (let [completions (complete/complete @state op-args)]
            (write-json completions))

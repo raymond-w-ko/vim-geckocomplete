@@ -1,6 +1,7 @@
 import os
 import socket
 import json
+import time
 from geckocomplete.utils import (
     iskeyword_to_ords,
     iskeyword_to_ords_json,
@@ -38,18 +39,16 @@ class Geckocomplete:
         bytes_recd = 0
         while bytes_recd < n:
             chunk = self.socket.recv(min(n - bytes_recd, 1024))
-            if chunk == b'':
+            if chunk == b"":
                 raise RuntimeError("socket connection broken")
             chunks.append(chunk)
             bytes_recd += len(chunk)
-        return b''.join(chunks)
+        return b"".join(chunks)
 
     def from_server(self):
         bites = self._socket_read(4)
         n = int.from_bytes(bites, "big")
-        # log(n)
         s = self._socket_read(n).decode("utf-8")
-        # log(s)
         return json.loads(s)
 
     def get_buf_path(self, buf):
@@ -64,29 +63,45 @@ class Geckocomplete:
         x = self.vim.exec_lua(lua_code.strip(), buf.number)
         return x
 
+    def is_buffer_modified(self, buf):
+        return self.vim.eval("getbufinfo(%d)[0].changed" % (buf.number))
+
     def merge_current_buffer(self, event):
         buf = self.vim.current.buffer
         path = self.get_buf_path(buf)
         iskeyword = self.vim.eval("&iskeyword")
         ords = iskeyword_to_ords_json(iskeyword)
-        text = self.nvim_copy_buffer(buf)
-        bites = text.encode("utf-8")
 
         buffer_snapshot = {
             "buffer-id": buf.number,
-            "num-chars": len(text),
-            "num-bytes": len(bites),
             "iskeyword-ords": ords,
             "buffer-path": path,
             "event": event,
         }
+
         # log("merge-buffer", str(buffer_snapshot))
-        self.to_server(["merge-buffer", buffer_snapshot])
-        self.to_server_raw(bites)
+        modified = self.is_buffer_modified(buf)
+        read_from_file = os.path.exists(path) and not modified
+        if read_from_file:
+            buffer_snapshot["num-chars"] = -1
+            buffer_snapshot["num-bytes"] = -1
+            buffer_snapshot["t"] = -1
+            self.to_server(["merge-buffer", buffer_snapshot])
+        else:
+            text = self.nvim_copy_buffer(buf)
+            bites = text.encode("utf-8")
+            buffer_snapshot["num-chars"] = len(text)
+            buffer_snapshot["num-bytes"] = len(bites)
+            buffer_snapshot["t"] = time.time()
+            self.to_server(["merge-buffer", buffer_snapshot])
+            self.to_server_raw(bites)
 
     def delete_buffer(self, bufnum):
         # log("delete-buffer", bufnum)
         self.to_server(["delete-buffer", bufnum])
+
+    def clear_last_complete_request(self):
+        self.last_complete_request = []
 
     def get_completions(self):
         row, col = self.vim.current.window.cursor

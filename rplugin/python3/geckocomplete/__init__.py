@@ -33,6 +33,10 @@ if hasattr(vim, "plugin"):
         def on_insert_enter(self):
             self._geckocomplete.merge_current_buffer("InsertEnter")
 
+        @vim.autocmd("InsertLeave", pattern="*", sync=True)
+        def clear_last_complete_request(self):
+            self._geckocomplete.clear_last_complete_request()
+
         @vim.function("Geckocomplete_delete_buffer", sync=True)
         def delete_buffer(self, args):
             bufnum = int(args[0])

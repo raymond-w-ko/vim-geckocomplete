@@ -5,39 +5,20 @@
  :deps {org.clojure/clojure {:mvn/version "1.10.2"}
         org.clojure/core.async {:mvn/version "1.3.610"}
         org.clojure/data.json {:mvn/version "1.0.0"}
-        ; org.clojure/tools.deps.alpha {:mvn/version "0.9.884"}
-        ; org.clojure/core.cache {:mvn/version "1.0.207"}
 
         ;; UNIX sockets
         com.kohlschutter.junixsocket/junixsocket-core {:mvn/version "2.3.2"}
 
-        ;; spec
-        ; orchestra {:mvn/version "2019.02.17-SNAPSHOT"}
-        ; expound {:mvn/version "0.8.4"}
-        ; metosin/spec-tools {:mvn/version "0.10.1"}
-
         ;; profiling
-        ; com.clojure-goes-fast/clj-async-profiler {:mvn/version "0.4.1"}
+        com.clojure-goes-fast/clj-async-profiler {:mvn/version "0.5.0"}
+        ; com.taoensso/tufte {:mvn/version "2.2.0"}
 
         ;; logging
         com.taoensso/timbre {:mvn/version "5.1.2"}
-        ; com.fzakaria/slf4j-timbre {:mvn/version "0.3.19"}
-        ; org.slf4j/log4j-over-slf4j {:mvn/version "1.7.30"}
-        ; org.slf4j/jul-to-slf4j {:mvn/version "1.7.30"}
-        ; org.slf4j/jcl-over-slf4j {:mvn/version "1.7.30"}
 
         ;; utils
-        fipp/fipp {:mvn/version "0.6.23"}
-        ; clj-time {:mvn/version "0.15.2"}
-        ; clj-http {:mvn/version "3.10.1"}
-        ; clj-commons/clj-yaml {:mvn/version "0.7.1"}
-        ; com.cognitect/transit-clj {:mvn/version "1.0.324"}
-        ; com.rpl/specter {:mvn/version "1.1.3"}
-        ; better-cond {:mvn/version "2.1.0"}
-        ; digest {:mvn/version "1.4.9"}
-        ; com.novemberain/pantomime {:mvn/version "2.11.0"}
-
-        }
+        com.climate/claypoole {:mvn/version "1.1.4"}
+        fipp/fipp {:mvn/version "0.6.23"}}
 
  :aliases
  {:outdated {:extra-deps {olical/depot {:mvn/version "2.1.0"}}

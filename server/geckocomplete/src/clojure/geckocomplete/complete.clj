@@ -3,44 +3,49 @@
    [geckocomplete Algorithm])
   (:require
    [clojure.string :as str]
+   [clojure.core.async :as async :refer [<! >! <!! >!! to-chan! pipeline chan]]
    [clojure.test :as test :refer [deftest is]]
    [clojure.java.io :as io]
    [clojure.core.async :refer [<! >! <!! >!! to-chan!]]
    [clojure.data.json :as json]
+   [com.climate.claypoole :as cp]
    [taoensso.timbre :as timbre
     :refer [log  trace  debug  info  warn  error  fatal  report
             logf tracef debugf infof warnf errorf fatalf reportf
             spy get-env]]
+   ; [taoensso.tufte :as tufte :refer [defnp p profiled profile]]
+   [clj-async-profiler.core :as prof :refer [profile]]
    
    [geckocomplete.macros :refer [->hash cond-xlet]]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defonce _0 (Algorithm/init))
+(defonce cpu-pool (cp/threadpool (cp/ncpus)))
+(defonce cpu-pool-shutdown-hook
+  (.. Runtime
+      (getRuntime)
+      (addShutdownHook (new Thread (fn [] (cp/shutdown cpu-pool))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn is-min-length? [word]
   (< 3 (count word)))
 
+(defn is-same-length? [needle word]
+  (= (count needle) (count word)))
+
 (defn format-word [word]
   {:word word :score -1.0})
 
-(defn is-negative-score? [{:keys [score]}]
-  (< score 0))
+(defn is-zero-score? [{:keys [score]}]
+  ;; scores are from negative infinity to zero
+  (>= score 0.0))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn is-subsequence? [haystack needle]
-  (cond-xlet
-   :let [n-hay (count haystack)
-         n-nee (count needle)]
-   (< n-hay n-nee) false
-   :let [index (loop [i 0 j 0]
-                 (cond-xlet
-                  (<= n-hay i) j
-                  :let [hay-ch (-> (get haystack i) (Character/toLowerCase))]
-                  (<= n-nee j) j
-                  :let [nee-ch (-> (get needle j) (Character/toLowerCase))]
-                  (= hay-ch nee-ch) (recur (inc i) (inc j))
-                  :return (recur (inc i) j)))]
-   :return (= index n-nee)))
+  (Algorithm/isSubSequence haystack needle))
 
 (deftest is-subsequence?-test
   (is (false? (is-subsequence? "a" "abc")))
@@ -55,42 +60,19 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn compute-word-boundary [{:as m :keys [word]}]
-  (cond-xlet
-   (<= (count word) 3) (assoc m :word-boundary "")
+(defn word-boundaries [{:as m :keys [word]}]
+  (let [wb (Algorithm/wordBoundaries word)]
+    (assoc m :word-boundaries wb)))
 
-   :let [n (dec (count word))
-         boundary
-         (loop [i 1
-                boundary [(first word)]]
-           (cond-xlet
-            (>= i n) boundary
-            :let [c1 (get word i)
-                  c2 (get word (inc i))]
+(comment (Algorithm/wordBoundaries "foo-bar"))
 
-            ;; snake case or needle case
-            (or (= \_ c1) (= \- c1))
-            (recur (+ i 2) (conj boundary c2))
-
-            ;; camelCase
-            (and (Character/isLowerCase c1) (Character/isUpperCase c2))
-            (recur (+ i 2) (conj boundary c2))
-
-            :return (recur (inc i) boundary)))]
-   :let [boundary (if (= 1 (count boundary))
-                    ""
-                    boundary)]
-   :return (->> (apply str boundary)
-                (str/lower-case)
-                (assoc m :word-boundary))))
-
-(deftest word-boundary-test
+(deftest word-boundaries-test
   (letfn [(f [word]
             (-> {:word word}
-                (compute-word-boundary)
-                :word-boundary))]
-    (is (= "" (f "foo")))
-    (is (= "" (f "food")))
+                (word-boundaries)
+                :word-boundaries))]
+    (is (= nil (f "foo")))
+    (is (= nil (f "food")))
     (is (= "sc" (f "snake_case")))
     (is (= "nc" (f "needle-case")))
     (is (= "lc" (f "lisp-case")))
@@ -100,31 +82,101 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn compute-clumping-score [haystack needle]
-  (cond-xlet
-   (<= (count needle) 2) 0.0
-   :let []))
+(defn clumping-score ^double [^String haystack ^String needle]
+  (let [raw-score (Algorithm/allCommonSubstringSimilarityScore haystack needle)]
+    (/ raw-score (-> needle count double))))
+
+(deftest clumping-score-test
+  (is (<= 0.78 (clumping-score "eatsleepnightxyz" "eatsleepabcxyz"))))
 
 (comment
-  (Algorithm/foo)
-  (compute-clumping-score "compute-clumping-score" "comcc")
-  (compute-clumping-score "compute-clumping-score" "ccscore"))
+  (clumping-score "compute-clumping-score" "comcc")
+  (clumping-score "compute-clumping-score" "ccscore"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn compute-score [needle {:as m :keys [word word-boundary score]}]
-  (let [subsequence-score (if (is-subsequence? word needle)
-                            (/ (count needle) (count word))
-                            0.0)
-        wb-score (if (is-subsequence? word-boundary needle)
-                   (/ (count needle) (count word-boundary))
-                   0.0)
-        clumping-score 0.0]
-    (comment (compute-clumping-score word needle))
-    (assoc m :score (+ subsequence-score wb-score clumping-score))))
+(defn compute-score [needle {:as m :keys [word word-boundaries]}]
+  (let [n-need (double (count needle))
+        n-word (double (count word))]
+    (assoc m :score
+           (- 0.0
+
+              (cond
+               (is-subsequence? word needle) (/ n-need n-word)
+               :else 0.0)
+
+              (cond-xlet
+               (nil? word-boundaries) 0.0
+               :let [n-wb (-> word-boundaries count double)]
+               (is-subsequence? word-boundaries needle) (/ n-need n-wb)
+               :else 0.0)
+
+              (clumping-score word needle)))))
 
 (defn score-word-using-needle [needle]
-  (comp (map format-word)
-        (map compute-word-boundary)
+  (comp (remove (partial is-same-length? needle))
+        (map format-word)
+        (map word-boundaries)
         (map (partial compute-score needle))
-        (remove is-negative-score?)))
+        (remove is-zero-score?)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn sort-words [words]
+  (sort-by (fn [{:keys [score word]}] [score word]) words))
+
+(defn format-completion [{:keys [word]} index]
+  {"word" word
+   "abbr" (str (if (= 10 index) "0 " (str index " "))
+               word)})
+
+(defn chunked-pmap [partition-size f coll]
+  (->> coll
+       (partition-all partition-size)
+       (pmap (comp doall
+                   (partial map f)))
+       (apply concat)))               
+
+(defn complete-parallel
+  "WARN: This exhibits huge variance in latency."
+  [{:keys [word-set]} needle]
+  (cond-xlet
+   :let [xf (score-word-using-needle needle)
+         f (fn [chunk*]
+             (into [] xf chunk*))
+         words (->> (partition-all (cp/ncpus) word-set)
+                    (cp/upmap cpu-pool f)
+                    (apply concat))]
+   :return
+   (->> (sort-words words)
+        (take 10)
+        (vec))))
+
+(defn complete-sync [{:keys [word-set]} needle]
+  (cond-xlet
+   :let [xf (score-word-using-needle needle)]
+   :return
+   (->> (into [] xf word-set)
+        (sort-words)
+        (take 10)
+        (vec))))
+
+(defonce *last-args (atom nil))
+
+(defn complete [{:as args :keys []} needle]
+  (reset! *last-args args)
+  ; (debug "word-set count:" (count word-set))
+  (cond-xlet
+   :let [completions (complete-parallel args needle)]
+
+   ;; we are only matching ourselves, abort!
+   (and (= 1 (count completions))
+        (= needle (-> completions first :word)))
+   []
+
+   :return (mapv format-completion completions (range 1 11))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(comment
+  (profile (dotimes [i 100] (complete @*last-args "genf"))))

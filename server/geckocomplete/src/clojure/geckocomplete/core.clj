@@ -13,13 +13,17 @@
     :refer [log  trace  debug  info  warn  error  fatal  report
             logf tracef debugf infof warnf errorf fatalf reportf
             spy get-env]]
+   ; [taoensso.tufte :as tufte :refer [defnp p profiled profile]]
    
    [geckocomplete.macros :refer [->hash cond-xlet]]
-   [geckocomplete.complete :refer [score-word-using-needle]])
+   [geckocomplete.complete :as complete])
   (:gen-class))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+; (defonce _0 (tufte/add-basic-println-handler!
+;              {:format-pstats-opts {:columns [:n-calls :p50 :mean :clock :total]
+;                                    :format-id-fn name}}))
 (def socket-filename "geckocomplete.sock")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -52,6 +56,9 @@
              :else (assoc m word new-count)))]
     (reduce rf global-words words)))
 
+(defn create-word-set [{:as state :keys [words]}]
+  (assoc state :word-set (-> words keys set)))
+
 (defn delete-buffer [state buffer-id]
   (cond-xlet
    :let [buf (get-in state [:buffers buffer-id])]
@@ -59,7 +66,8 @@
    :let [{:keys [words]} buf]
    :return (-> state
                (update :buffers dissoc buffer-id)
-               (update :words unmerge-words words))))
+               (update :words unmerge-words words)
+               (create-word-set))))
 
 (def is-word-char?
   (memoize
@@ -90,32 +98,8 @@
           (delete-buffer buffer-id)
           (assoc-in [:buffers buffer-id] (->hash buffer-id  buffer-path buffer-text
                                                  iskeyword-ords words))
-          (update :words merge-words words)))))
-
-(defn format-completion [{:keys [word]} index]
-  (let []
-    {"word" word
-     "abbr" (str (if (= 10 index) "0 " (str index " "))
-                 word)}))
-
-(defn complete [{:as state :keys [words]} needle]
-  (cond-xlet
-   :let [word-set (set (keys words))]
-   :let [in (to-chan! word-set)
-        out (chan)
-        xf (score-word-using-needle needle)]
-   :do (pipeline 8 out xf in)
-   :let [words (<!! (async/into [] out))
-         completions (->> (sort-by (fn [{:keys [score word]}] [(- score) word]) words)
-                          (take 10)
-                          (vec))]
-
-   ;; we are only matching ourselves, abort!
-   (and (= 1 (count completions))
-        (= needle (-> completions first :word)))
-   []
-
-   :return (mapv format-completion completions (range 1 11))))
+          (update :words merge-words words)
+          (create-word-set)))))
 
 (defn handle-connection [sock]
   (let [in-stream (.getInputStream sock)
@@ -149,17 +133,17 @@
            (debug "delete-buffer" buffer-id)
            (send state delete-buffer buffer-id))
          "merge-buffer"
-         (let [{:keys [num-chars]} op-args
+         (let [{:keys [num-chars buffer-path]} op-args
                buffer-text (read-n-chars in-reader num-chars)
                op-args (-> (assoc op-args :buffer-text buffer-text)
                            (update :iskeyword-ords set))
                {:keys [buffer-id]} op-args]
            (assert (number? buffer-id))
-           (debug "merge-buffer" buffer-id)
+           (debug "merge-buffer" buffer-id buffer-path)
            (send state merge-buffer op-args)) 
          "complete"
-         (-> (complete @state op-args)
-             (write-json))
+         (let [completions (complete/complete @state op-args)]
+           (write-json completions))
          (errorf "UNKNOWN CMD: %s %s" (pr-str op) (pr-str op-args)))
        (when-not (contains? #{"quit" "exit"} op)
          (recur (read-next-cmd))))

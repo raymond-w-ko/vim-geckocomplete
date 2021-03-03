@@ -7,9 +7,10 @@ let g:geckocomplete_completion_delay =
 augroup geckocomplete
   autocmd CursorMovedI * call geckocomplete#completion_timer_start()
   autocmd InsertEnter *  call geckocomplete#completion_timer_start()
-  autocmd BufDelete * call geckocomplete#delete_current_buffer()
   " autocmd TextChangedI * call geckocomplete#completion_timer_start()
   " autocmd TextChangedP *  call geckocomplete#completion_timer_start()
+  "
+  autocmd BufDelete * call geckocomplete#delete_current_buffer()
 augroup END
 
 noremap  <silent> <Plug>geckocomplete_trigger <nop>

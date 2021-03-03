@@ -1,25 +1,33 @@
 let s:pause_completion = 0
+let s:pmenu_first_time = 0
 let s:completions = []
+
+function geckocomplete#init() abort
+endfunction
 
 function geckocomplete#completefunc(findstart, base) abort
   if a:findstart
+    " do below to avoid immediate recompletion after BS, only after a delay
+    if !s:pmenu_first_time && g:geckocomplete_completion_delay > 0
+      echom "abort"
+      call geckocomplete#completion_timer_start(0)
+      return -1
+    else
+      let s:pmenu_first_time = 0
+    endif
+
     let x = Geckocomplete_get_completions()
-    let [i, completions] = x
+    let [findstart, completions] = x
     let s:completions = completions
-    return i
+    return findstart
   else
     return {
         \ "words": s:completions,
-        \ "refresh": "always",
         \ }
   endif
 endfunction
 
-" no neovim support
-" setlocal completeopt+=popup
-" setlocal completepopup=height:10,width:60,align:item,border:on
-function s:completion_begin() abort
-  call s:completion_timer_stop()
+function s:trigger_pmenu() abort
   " due to the various plugins overriding these settings, always bash this
   if !exists("b:geckocomplete_buffer_setup")
     setlocal completefunc=geckocomplete#completefunc
@@ -27,9 +35,19 @@ function s:completion_begin() abort
     setlocal completeopt+=menuone
     setlocal completeopt-=menu
     setlocal completeopt+=noselect
+    setlocal completeopt+=noinsert
     let b:geckocomplete_buffer_setup = 1
   endif
+  let s:pmenu_first_time = 1
   call feedkeys("\<Plug>geckocomplete_trigger")
+endfunction
+
+" no neovim support
+" setlocal completeopt+=popup
+" setlocal completepopup=height:10,width:60,align:item,border:on
+function s:completion_begin() abort
+  call s:completion_timer_stop()
+  call s:trigger_pmenu()
 endfunction
 
 """"""""""""""""""""""""""""""""""""""""
@@ -42,11 +60,13 @@ function! s:completion_timer_stop() abort
   unlet s:completion_timer
 endfunction
 
-function! geckocomplete#completion_timer_start() abort
+function! geckocomplete#completion_timer_start(delay_only) abort
   call s:completion_timer_stop()
-  if s:pause_completion | return | endif
-
   let delay = g:geckocomplete_completion_delay
+
+  if s:pause_completion | return | endif
+  if a:delay_only &&  delay <= 0 | return | endif
+
   if delay > 0
     let s:completion_timer = timer_start(delay, {-> s:completion_begin()})
   else

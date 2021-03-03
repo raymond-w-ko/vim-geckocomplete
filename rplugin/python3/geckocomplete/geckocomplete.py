@@ -76,16 +76,18 @@ class Geckocomplete:
 
     def merge_current_buffer(self, event):
         buf = self.vim.current.buffer
+        path = self.get_buf_path(buf)
 
-        bufhidden = buf.options["bufhidden"]
-        if not bufhidden.strip():
+        buflisted = buf.options["buflisted"]
+        if not buflisted:
             return
-
+        bufhidden = buf.options["bufhidden"]
+        if bufhidden.strip():
+            return
         filetype = buf.options["filetype"]
         if filetype in IGNORED_FILE_TYPES:
             return
 
-        path = self.get_buf_path(buf)
         iskeyword = self.vim.eval("&iskeyword")
         ords = iskeyword_to_ords_json(iskeyword)
 
@@ -96,7 +98,7 @@ class Geckocomplete:
             "event": event,
         }
 
-        # log("merge-buffer", str(buffer_snapshot))
+        log("merge-buffer", str(buffer_snapshot))
         modified = self.is_buffer_modified(buf)
         read_from_file = (
             os.path.exists(path) and not os.path.isdir(path) and not modified
@@ -136,7 +138,7 @@ class Geckocomplete:
 
         # we may be at first column, or not even after a word
         if i < 0 or not is_word_char(ords, line_prefix[i]):
-            return [-2, []]
+            return [-1, []]
 
         while i >= 0:
             ch = line_prefix[i]
@@ -149,7 +151,7 @@ class Geckocomplete:
         buf = self.vim.current.buffer
         complete_request = [buf.number, row, findstart, word]
         if self.last_complete_request == complete_request:
-            return [-2, []]
+            return [-1, []]
         self.last_complete_request = complete_request
 
         log("completion:%d:%s:" % (findstart, word))

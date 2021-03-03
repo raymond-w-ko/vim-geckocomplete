@@ -12,6 +12,7 @@ from geckocomplete.utils import (
 DIR = os.path.dirname(os.path.realpath(__file__))
 SOCKET_FILE = os.path.join(DIR, "../../../server/geckocomplete/geckocomplete.sock")
 SOCKET_FILE = os.path.normpath(SOCKET_FILE)
+IGNORED_FILE_TYPES = {"fzf" "startify"}
 
 
 class Geckocomplete:
@@ -75,6 +76,15 @@ class Geckocomplete:
 
     def merge_current_buffer(self, event):
         buf = self.vim.current.buffer
+
+        bufhidden = buf.options["bufhidden"]
+        if not bufhidden.strip():
+            return
+
+        filetype = buf.options["filetype"]
+        if filetype in IGNORED_FILE_TYPES:
+            return
+
         path = self.get_buf_path(buf)
         iskeyword = self.vim.eval("&iskeyword")
         ords = iskeyword_to_ords_json(iskeyword)

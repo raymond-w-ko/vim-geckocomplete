@@ -19,6 +19,7 @@ endfunction
 " setlocal completeopt+=popup
 " setlocal completepopup=height:10,width:60,align:item,border:on
 function s:completion_begin() abort
+  call s:completion_timer_stop()
   " due to the various plugins overriding these settings, always bash this
   if !exists("b:geckocomplete_buffer_setup")
     setlocal completefunc=geckocomplete#completefunc
@@ -42,9 +43,7 @@ function! s:completion_timer_stop() abort
 endfunction
 
 function! geckocomplete#completion_timer_start() abort
-  if exists("s:completion_timer")
-    call s:completion_timer_stop()
-  endif
+  call s:completion_timer_stop()
   if s:pause_completion | return | endif
 
   let delay = g:geckocomplete_completion_delay
@@ -61,7 +60,11 @@ function geckocomplete#toggle_pause_completion()
   else
     let s:pause_completion = 1
   endif
-  return ''
+  if pumvisible()
+    return "\<C-e>"
+  else
+    return ""
+  endif
 endfunction
 
 " The buffer number must be retrieved via VimScript, otherwise it is too late

@@ -27,9 +27,16 @@ class Geckocomplete:
         except socket.error as msg:
             log(str(msg))
 
+    def to_server_int(self, n):
+        bites = n.to_bytes(4, byteorder="big")
+        self.socket.sendall(bites)
+
     def to_server(self, cmd):
         s = json.dumps(cmd)
-        self.socket.sendall(s.encode("utf-8"))
+        bites = s.encode("utf-8")
+        n = len(bites)
+        self.to_server_int(n)
+        self.socket.sendall(bites)
 
     def to_server_raw(self, bites):
         self.socket.sendall(bites)
@@ -81,20 +88,26 @@ class Geckocomplete:
 
         # log("merge-buffer", str(buffer_snapshot))
         modified = self.is_buffer_modified(buf)
-        read_from_file = os.path.exists(path) and not modified
+        read_from_file = (
+            os.path.exists(path) and not os.path.isdir(path) and not modified
+        )
         if read_from_file:
             buffer_snapshot["num-chars"] = -1
             buffer_snapshot["num-bytes"] = -1
             buffer_snapshot["t"] = -1
+            buffer_snapshot["read-from-disk"] = True
             self.to_server(["merge-buffer", buffer_snapshot])
         else:
             text = self.nvim_copy_buffer(buf)
             bites = text.encode("utf-8")
+            n_bites = len(bites)
             buffer_snapshot["num-chars"] = len(text)
-            buffer_snapshot["num-bytes"] = len(bites)
+            buffer_snapshot["num-bytes"] = n_bites
             buffer_snapshot["t"] = time.time()
+            buffer_snapshot["read-from-disk"] = False
             self.to_server(["merge-buffer", buffer_snapshot])
-            self.to_server_raw(bites)
+            if n_bites > 0:
+                self.to_server_raw(bites)
 
     def delete_buffer(self, bufnum):
         # log("delete-buffer", bufnum)

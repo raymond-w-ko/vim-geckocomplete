@@ -3,6 +3,7 @@
    [java.io File InputStreamReader BufferedReader OutputStreamWriter]
    [java.net Socket]
    [java.nio ByteBuffer]
+   [java.nio.charset StandardCharsets]
    [sun.misc Signal SignalHandler]
    [org.newsclub.net.unix AFUNIXServerSocket AFUNIXSocketAddress])
   (:require
@@ -27,6 +28,17 @@
 (def socket-filename "geckocomplete.sock")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn read-n-bytes [input-stream n]
+  (let [buf (byte-array n)]
+    (loop [i 0
+           need-to-read n]
+      (let [num-read (.read input-stream buf i need-to-read)
+            i (+ i num-read)
+            need-to-read (- n i)]
+        (if (> 0 need-to-read)
+          (recur i need-to-read)
+          buf)))))
 
 (defn read-n-chars [in-reader n]
   (let [cbuf (char-array n)]
@@ -101,13 +113,16 @@
           (update :words merge-words words)
           (create-word-set)))))
 
-(defn get-buffer-text [in-reader {:keys [num-chars buffer-path]}]
-  (if (<= 0 num-chars)
-    (read-n-chars in-reader num-chars)
-    (slurp buffer-path :encoding "UTF-8")))
+(defn get-buffer-text [in-stream
+                       {:as op-args :keys [num-bytes buffer-path read-from-disk]}]
+  (cond
+   read-from-disk (slurp buffer-path :encoding "UTF-8")
+   (< 0 num-bytes) (let [bites (read-n-bytes in-stream num-bytes)]
+                     (new String bites StandardCharsets/UTF_8))
+   :else ""))
 
-(defn handle-merge-buffer-cmd [state in-reader op-args]
-  (let [buffer-text (get-buffer-text in-reader op-args)
+(defn handle-merge-buffer-cmd [state in-stream op-args]
+  (let [buffer-text (get-buffer-text in-stream op-args)
         op-args (-> (assoc op-args :buffer-text buffer-text)
                     (update :iskeyword-ords set))
         {:keys [buffer-id buffer-path]} op-args]
@@ -118,11 +133,14 @@
 (defn handle-connection [sock]
   (let [in-stream (.getInputStream sock)
         out-stream (.getOutputStream sock)
-        in-reader (-> (InputStreamReader. in-stream "UTF-8")
-                      (BufferedReader.))
         out-writer (OutputStreamWriter. out-stream "UTF-8")
         read-next-cmd (fn []
-                        (json/read in-reader :key-fn keyword))
+                        (let [n (-> (read-n-bytes in-stream 4)
+                                    (ByteBuffer/wrap)
+                                    (.getInt))
+                              msg-as-bytes (read-n-bytes in-stream n)]
+                          (-> (new String msg-as-bytes StandardCharsets/UTF_8)
+                              (json/read-str :key-fn keyword))))
         write-json (fn [obj]
                      (let [s (json/write-str obj)
                            bites (.getBytes s "UTF-8")
@@ -147,7 +165,7 @@
            (debug "delete-buffer" buffer-id)
            (send state delete-buffer buffer-id))
          "merge-buffer"
-         (handle-merge-buffer-cmd state in-reader op-args)
+         (handle-merge-buffer-cmd state in-stream op-args)
          "complete"
          (let [completions (complete/complete @state op-args)]
            (write-json completions))

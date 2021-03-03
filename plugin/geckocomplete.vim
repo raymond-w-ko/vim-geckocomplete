@@ -1,5 +1,8 @@
 let g:geckocomplete_quick_select_keys =
     \ get(g:, "geckocomplete_quick_select_keys", "1234567890")
+
+let g:geckocomplete_completion_delay =
+    \ get(g:, "geckocomplete_completion_delay", 333)
     
 augroup geckocomplete
   autocmd CursorMovedI * call geckocomplete#completion_timer_start()

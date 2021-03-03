@@ -1,3 +1,4 @@
+let s:pause_completion = 0
 let s:completions = []
 
 function geckocomplete#completefunc(findstart, base) abort
@@ -44,13 +45,23 @@ function! geckocomplete#completion_timer_start() abort
   if exists("s:completion_timer")
     call s:completion_timer_stop()
   endif
+  if s:pause_completion | return | endif
 
-  let delay = 0
+  let delay = g:geckocomplete_completion_delay
   if delay > 0
     let s:completion_timer = timer_start(delay, {-> s:completion_begin()})
   else
     call s:completion_begin()
   endif
+endfunction
+
+function geckocomplete#toggle_pause_completion()
+  if s:pause_completion
+    let s:pause_completion = 0
+  else
+    let s:pause_completion = 1
+  endif
+  return ''
 endfunction
 
 " The buffer number must be retrieved via VimScript, otherwise it is too late

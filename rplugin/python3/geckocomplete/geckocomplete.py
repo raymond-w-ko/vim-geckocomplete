@@ -98,7 +98,7 @@ class Geckocomplete:
             "event": event,
         }
 
-        log("merge-buffer", str(buffer_snapshot))
+        # log("merge-buffer", str(buffer_snapshot))
         modified = self.is_buffer_modified(buf)
         read_from_file = (
             os.path.exists(path) and not os.path.isdir(path) and not modified

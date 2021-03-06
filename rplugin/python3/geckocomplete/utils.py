@@ -3,7 +3,12 @@ import re
 from datetime import datetime
 
 
+LOGGING_ENABLED = False
+
+
 def log(*args):
+    if not LOGGING_ENABLED:
+        return
     t = datetime.now().isoformat()
     with open("/tmp/geckocomplete.log", "a") as f:
         args = map(str, args)

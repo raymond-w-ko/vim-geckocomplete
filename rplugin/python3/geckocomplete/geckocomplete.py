@@ -12,21 +12,21 @@ from geckocomplete.utils import (
 DIR = os.path.dirname(os.path.realpath(__file__))
 SOCKET_FILE = os.path.join(DIR, "../../../server/geckocomplete/geckocomplete.sock")
 SOCKET_FILE = os.path.normpath(SOCKET_FILE)
-IGNORED_FILE_TYPES = {"fzf" "startify"}
+IGNORED_FILE_TYPES = {"fzf", "startify"}
 
 
 class Geckocomplete:
     def __init__(self, vim):
         self.vim = vim
         self.last_complete_request = []
+        self.disabled = True
 
         log(DIR)
         log(SOCKET_FILE)
-        self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        try:
+        if os.path.exists(SOCKET_FILE):
+            self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.socket.connect(SOCKET_FILE)
-        except socket.error as msg:
-            log(str(msg))
+            self.disabled = False
 
     def to_server_int(self, n):
         bites = n.to_bytes(4, byteorder="big")
@@ -75,6 +75,9 @@ class Geckocomplete:
         return self.vim.eval("getbufinfo(%d)[0].changed" % (buf.number))
 
     def merge_current_buffer(self, event):
+        if self.disabled:
+            return
+
         buf = self.vim.current.buffer
         path = self.get_buf_path(buf)
 
@@ -122,13 +125,19 @@ class Geckocomplete:
                 self.to_server_raw(bites)
 
     def delete_buffer(self, bufnum):
+        if self.disabled:
+            return
         # log("delete-buffer", bufnum)
         self.to_server(["delete-buffer", bufnum])
 
     def clear_last_complete_request(self):
+        if self.disabled:
+            return
         self.last_complete_request = []
 
     def get_completions(self):
+        if self.disabled:
+            return [-1, []]
         row, col = self.vim.current.window.cursor
         iskeyword = self.vim.eval("&iskeyword")
         ords = iskeyword_to_ords(iskeyword)
@@ -154,7 +163,7 @@ class Geckocomplete:
             return [-1, []]
         self.last_complete_request = complete_request
 
-        log("completion:%d:%s:" % (findstart, word))
+        # log("completion:%d:%s:" % (findstart, word))
         self.to_server(["complete", word])
         completions = self.from_server()
         return [findstart, completions]

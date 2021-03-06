@@ -97,21 +97,29 @@
 
 (defn compute-score [needle {:as m :keys [word word-boundaries]}]
   (let [n-need (double (count needle))
-        n-word (double (count word))]
+        n-word (double (count word))
+        is-subseq-of-word (is-subsequence? word needle)
+        is-subseq-of-wb (if word-boundaries
+                          (is-subsequence? word-boundaries needle)
+                          false)]
     (assoc m :score
            (- 0.0
+              ;; % of 'word' that shares a common subsequence with needle.
+              (if is-subseq-of-word
+                (/ n-need n-word)
+                0.0)
 
-              (cond
-               (is-subsequence? word needle) (/ n-need n-word)
-               :else 0.0)
+              ;; % of 'word-boundaries' that shares a common subsequence with
+              ;; needle
+              (if is-subseq-of-wb
+                (/ n-need (-> word-boundaries count double))
+                0.0)
 
-              (cond-xlet
-               (nil? word-boundaries) 0.0
-               :let [n-wb (-> word-boundaries count double)]
-               (is-subsequence? word-boundaries needle) (/ n-need n-wb)
-               :else 0.0)
-
-              (clumping-score word needle)))))
+              ;; add clumping score if needle share common subsequence
+              ;; with 'word' and 'word-boundaries'
+              (if (and is-subseq-of-word is-subseq-of-wb)
+                (clumping-score word needle)
+                0.0)))))
 
 (defn score-word-using-needle [needle]
   (comp (remove (partial is-same-length? needle))

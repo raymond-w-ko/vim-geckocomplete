@@ -2,6 +2,10 @@ import os
 import socket
 import json
 import time
+import threading
+import platform
+from queue import Queue
+from subprocess import Popen, DEVNULL
 from geckocomplete.utils import (
     iskeyword_to_ords,
     iskeyword_to_ords_json,
@@ -10,37 +14,69 @@ from geckocomplete.utils import (
 )
 
 DIR = os.path.dirname(os.path.realpath(__file__))
+DIR = os.path.normpath(DIR)
+SERVER_DIR = os.path.join(DIR, "../../../server/geckocomplete")
+SERVER_DIR = os.path.normpath(SERVER_DIR)
 SOCKET_FILE = os.path.join(DIR, "../../../server/geckocomplete/geckocomplete.sock")
 SOCKET_FILE = os.path.normpath(SOCKET_FILE)
 IGNORED_FILE_TYPES = {"fzf", "startify"}
+
+
+def start_server_process():
+    cmd = ["java", "-jar", "geckocomplete.jar"]
+    kwargs = {"cwd": SERVER_DIR}
+    if platform.system() == "Windows":
+        CREATE_NEW_PROCESS_GROUP = 0x00000200
+        DETACHED_PROCESS = 0x00000008
+        kwargs.update(creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP)
+    else:
+        kwargs.update(start_new_session=True)
+    Popen(cmd, stdin=DEVNULL, stdout=DEVNULL, stderr=DEVNULL, **kwargs)
 
 
 class Geckocomplete:
     def __init__(self, vim):
         self.vim = vim
         self.last_complete_request = []
-        self.disabled = True
+        self.ready = False
+        self.broken = False
+        self.started_server = False
+        self.to_server_q = Queue()
+        self.socket = None
+        t = threading.Thread(target=self.send_to_server_loop, daemon=True)
+        t.start()
 
-        log(DIR)
-        log(SOCKET_FILE)
-        if os.path.exists(SOCKET_FILE):
-            self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            self.socket.connect(SOCKET_FILE)
-            self.disabled = False
+    def send_to_server_loop(self):
+        "This runs in a separate daemon thread"
+        while True:
+            if not os.path.exists(SOCKET_FILE):
+                if not self.started_server:
+                    start_server_process()
+                    self.started_server = True
+                time.sleep(4)
+                continue
+            if not self.ready:
+                log(SOCKET_FILE)
+                self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+                self.socket.connect(SOCKET_FILE)
+                self.socket.settimeout(2.0)
+                self.ready = True
+            payload = self.to_server_q.get()
+            self.socket.sendall(payload)
 
     def to_server_int(self, n):
         bites = n.to_bytes(4, byteorder="big")
-        self.socket.sendall(bites)
+        self.to_server_q.put(bites)
 
     def to_server(self, cmd):
         s = json.dumps(cmd)
         bites = s.encode("utf-8")
         n = len(bites)
         self.to_server_int(n)
-        self.socket.sendall(bites)
+        self.to_server_q.put(bites)
 
     def to_server_raw(self, bites):
-        self.socket.sendall(bites)
+        self.to_server_q.put(bites)
 
     def _socket_read(self, n):
         chunks = []
@@ -75,9 +111,6 @@ class Geckocomplete:
         return self.vim.eval("getbufinfo(%d)[0].changed" % (buf.number))
 
     def merge_current_buffer(self, event):
-        if self.disabled:
-            return
-
         buf = self.vim.current.buffer
         path = self.get_buf_path(buf)
 
@@ -125,19 +158,18 @@ class Geckocomplete:
                 self.to_server_raw(bites)
 
     def delete_buffer(self, bufnum):
-        if self.disabled:
-            return
         # log("delete-buffer", bufnum)
         self.to_server(["delete-buffer", bufnum])
 
     def clear_last_complete_request(self):
-        if self.disabled:
-            return
         self.last_complete_request = []
 
     def get_completions(self):
-        if self.disabled:
+        if self.broken:
             return [-1, []]
+        if not self.ready:
+            return [-1, []]
+
         row, col = self.vim.current.window.cursor
         iskeyword = self.vim.eval("&iskeyword")
         ords = iskeyword_to_ords(iskeyword)
@@ -165,5 +197,9 @@ class Geckocomplete:
 
         # log("completion:%d:%s:" % (findstart, word))
         self.to_server(["complete", word])
-        completions = self.from_server()
-        return [findstart, completions]
+        try:
+            completions = self.from_server()
+            return [findstart, completions]
+        except socket.timeout:
+            self.broken = True
+            return [-1, []]

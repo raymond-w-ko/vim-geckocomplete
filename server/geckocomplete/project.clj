@@ -15,5 +15,4 @@
   :middleware [lein-tools-deps.plugin/resolve-dependencies-with-deps-edn]
   :java-source-paths ["src/java"]
   :lein-tools-deps/config {:config-files [:project]}
-  :profiles {:uberjar {:aot :all
-                       :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})
+  :profiles {:uberjar {:aot :all}})

@@ -197,7 +197,12 @@
     (print server)))
 (comment (server-loop))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn -main
-  "I don't do a whole lot ... yet."
   [& args]
-  (server-loop))
+  (when-not (.exists (io/file socket-filename))
+    (.. Runtime
+        (getRuntime)
+        (addShutdownHook (new Thread (fn [] (io/delete-file socket-filename true)))))
+    (server-loop)))

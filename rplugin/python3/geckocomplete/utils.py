@@ -3,6 +3,8 @@ import re
 from datetime import datetime
 
 
+# for Python 3.7 compatibility
+memoize = functools.lru_cache(maxsize=None)
 LOGGING_ENABLED = False
 
 
@@ -16,7 +18,7 @@ def log(*args):
         f.write("[%s] %s\n" % (t, line))
 
 
-@functools.cache
+@memoize
 def iskeyword_to_ords(iskeyword):
     tokens = iskeyword.split(",")
     valid_ords = {}
@@ -53,7 +55,7 @@ def iskeyword_to_ords(iskeyword):
     return valid_ords
 
 
-@functools.cache
+@memoize
 def iskeyword_to_ords_json(iskeyword):
     m = iskeyword_to_ords(iskeyword)
     ords = []
@@ -63,7 +65,7 @@ def iskeyword_to_ords_json(iskeyword):
     return ords
 
 
-@functools.cache
+@memoize
 def is_ch_in_regex_word_set(ch):
     m = re.match(r"\w", ch)
     return m is not None

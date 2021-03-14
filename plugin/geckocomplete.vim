@@ -13,8 +13,8 @@ augroup geckocomplete
   autocmd BufDelete * call geckocomplete#delete_current_buffer()
 augroup END
 
-noremap  <silent> <plug>geckocomplete_trigger <nop>
-inoremap <silent> <plug>geckocomplete_trigger <c-x><c-u>
+noremap  <silent> <Plug>(geckocomplete) <nop>
+inoremap <silent> <Plug>(geckocomplete) <c-x><c-u>
 
 let n = strlen(g:geckocomplete_quick_select_keys) - 1
 for i in range(0, n, 1)

@@ -9,9 +9,8 @@ function geckocomplete#completefunc(findstart, base) abort
   if a:findstart
     " do below to avoid immediate recompletion after BS, only after a delay
     if !s:pmenu_first_time && g:geckocomplete_completion_delay > 0
-      echom "abort"
       call geckocomplete#completion_timer_start(0)
-      return -1
+      return -2
     else
       let s:pmenu_first_time = 0
     endif
@@ -23,6 +22,7 @@ function geckocomplete#completefunc(findstart, base) abort
   else
     return {
         \ "words": s:completions,
+        \ "refresh": "always",
         \ }
   endif
 endfunction

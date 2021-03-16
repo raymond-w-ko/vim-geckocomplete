@@ -166,9 +166,9 @@ class Geckocomplete:
 
     def get_completions(self):
         if self.broken:
-            return [-1, []]
+            return [-2, []]
         if not self.ready:
-            return [-1, []]
+            return [-2, []]
 
         row, col = self.vim.current.window.cursor
         iskeyword = self.vim.eval("&iskeyword")
@@ -179,7 +179,7 @@ class Geckocomplete:
 
         # we may be at first column, or not even after a word
         if i < 0 or not is_word_char(ords, line_prefix[i]):
-            return [-1, []]
+            return [-2, []]
 
         while i >= 0:
             ch = line_prefix[i]
@@ -192,7 +192,7 @@ class Geckocomplete:
         buf = self.vim.current.buffer
         complete_request = [buf.number, row, findstart, word]
         if self.last_complete_request == complete_request:
-            return [-1, []]
+            return [-2, []]
         self.last_complete_request = complete_request
 
         # log("completion:%d:%s:" % (findstart, word))
@@ -202,4 +202,4 @@ class Geckocomplete:
             return [findstart, completions]
         except socket.timeout:
             self.broken = True
-            return [-1, []]
+            return [-2, []]

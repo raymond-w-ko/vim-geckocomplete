@@ -46,6 +46,9 @@ class Geckocomplete:
         t = threading.Thread(target=self.send_to_server_loop, daemon=True)
         t.start()
 
+    def is_nvim(self):
+        return hasattr(self.vim, "plugin")
+
     def send_to_server_loop(self):
         "This runs in a separate daemon thread"
         while True:
@@ -107,6 +110,9 @@ class Geckocomplete:
         x = self.vim.exec_lua(lua_code.strip(), buf.number)
         return x
 
+    def vim_copy_buffer(self, buf):
+        return "\n".join(buf)
+
     def is_buffer_modified(self, buf):
         return self.vim.eval("getbufinfo(%d)[0].changed" % (buf.number))
 
@@ -146,7 +152,10 @@ class Geckocomplete:
             buffer_snapshot["read-from-disk"] = True
             self.to_server(["merge-buffer", buffer_snapshot])
         else:
-            text = self.nvim_copy_buffer(buf)
+            if self.is_nvim():
+                text = self.nvim_copy_buffer(buf)
+            else:
+                text = self.vim_copy_buffer(buf)
             bites = text.encode("utf-8")
             n_bites = len(bites)
             buffer_snapshot["num-chars"] = len(text)

@@ -5,6 +5,7 @@ let g:geckocomplete_completion_delay =
     \ get(g:, "geckocomplete_completion_delay", 350)
 
 augroup geckocomplete
+  au!
   " autocmd CursorMovedI * call geckocomplete#completion_timer_start(0)
   " autocmd InsertEnter *  call geckocomplete#completion_timer_start(0)
   autocmd TextChangedI * call geckocomplete#completion_timer_start(0)
@@ -33,3 +34,31 @@ hi PmenuSel
     \ ctermbg=46 ctermfg=22 term=none cterm=none
 
 call geckocomplete#init()
+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+" VIM 8+
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+if has("nvim")
+  finish
+endif
+
+let s:python_client = yarp#py3("geckocomplete")
+
+func! Geckocomplete_delete_buffer(bufnum) abort
+  return s:python_client.call("geckocomplete_delete_buffer", a:bufnum)
+endfunc
+
+func! Geckocomplete_get_completions() abort
+  return s:python_client.call("geckocomplete_get_completions")
+endfunc
+
+func! Geckocomplete_merge_current_buffer(vim_event_type) abort
+  return s:python_client.call("geckocomplete_merge_current_buffer", a:vim_event_type)
+endfunc
+
+
+augroup geckocomplete
+  autocmd BufReadPost * call Geckocomplete_merge_current_buffer("BufReadPost")
+  autocmd BufLeave * call Geckocomplete_merge_current_buffer("BufLeave")
+  autocmd InsertEnter * call Geckocomplete_merge_current_buffer("InsertEnter")
+augroup END

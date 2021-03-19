@@ -9,7 +9,9 @@ if find_spec("yarp"):
 else:
     import pynvim as vim
 
-if hasattr(vim, "plugin"):
+is_nvim = hasattr(vim, "plugin")
+
+if is_nvim:
 
     @vim.plugin
     class GeckocompleteHandlers:
@@ -47,5 +49,20 @@ if hasattr(vim, "plugin"):
             return self._geckocomplete.get_completions()
 
 
-if find_spec("yarp"):
+elif not is_nvim and find_spec("yarp"):
     global_geckocomplete = Geckocomplete(vim)
+
+    def geckocomplete_init():
+        pass
+
+    def geckocomplete_merge_current_buffer(vim_event_name: str):
+        return global_geckocomplete.merge_current_buffer(vim_event_name)
+
+    def geckocomplete_clear_last_complete_request():
+        return global_geckocomplete.clear_last_complete_request()
+
+    def geckocomplete_delete_buffer(bufnum: int):
+        return global_geckocomplete.delete_buffer(bufnum)
+
+    def geckocomplete_get_completions():
+        return global_geckocomplete.get_completions()

@@ -62,7 +62,7 @@ elif not is_nvim and find_spec("yarp"):
         return global_geckocomplete.clear_last_complete_request()
 
     def geckocomplete_delete_buffer(bufnum: int):
-        return global_geckocomplete.delete_buffer(bufnum)
+        return global_geckocomplete.delete_buffer(int(bufnum))
 
     def geckocomplete_get_completions():
         return global_geckocomplete.get_completions()

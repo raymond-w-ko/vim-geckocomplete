@@ -14,14 +14,13 @@ augroup geckocomplete
   autocmd BufDelete * call geckocomplete#delete_current_buffer()
 augroup END
 
-noremap  <silent> <Plug>(geckocomplete) <nop>
-inoremap <silent> <Plug>(geckocomplete) <c-x><c-u>
+inoremap <silent><nowait> <Plug>(geckocomplete) <c-x><c-u>
 
 let n = strlen(g:geckocomplete_quick_select_keys) - 1
 for i in range(0, n, 1)
   let key = g:geckocomplete_quick_select_keys[i]
   let cmd = printf(
-      \ "inoremap <silent> %s \<C-r>=geckocomplete#quick_select('%s', %d)\<CR>",
+      \ "inoremap <silent><nowait> %s \<C-r>=geckocomplete#quick_select('%s', %d)\<CR>",
       \ key, key, i+1)
   exe cmd
 endfor

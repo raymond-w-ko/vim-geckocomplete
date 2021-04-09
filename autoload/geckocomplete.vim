@@ -28,9 +28,11 @@ function geckocomplete#completefunc(findstart, base) abort
 endfunction
 
 function s:trigger_pmenu() abort
+  " always bash this, plugins like clojure-vim/clojure.vim sets this
+  setlocal completefunc=geckocomplete#completefunc
+
   " due to the various plugins overriding these settings, always bash this
   if !exists("b:geckocomplete_buffer_setup")
-    setlocal completefunc=geckocomplete#completefunc
     setlocal completeopt-=longest
     setlocal completeopt+=menuone
     setlocal completeopt-=menu

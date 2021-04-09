@@ -12,6 +12,7 @@ augroup geckocomplete
   " autocmd TextChangedP *  call geckocomplete#completion_timer_start(1)
 
   autocmd BufDelete * call geckocomplete#delete_current_buffer()
+  autocmd BufReadPost * call geckocomplete#setup_pmenu_highlight()
 augroup END
 
 inoremap <silent><nowait> <Plug>(geckocomplete) <c-x><c-u>
@@ -25,12 +26,14 @@ for i in range(0, n, 1)
   exe cmd
 endfor
 
-hi Pmenu
-    \ guifg=#00ff00 guibg=#003300 gui=none
-    \ ctermbg=22 ctermfg=46 term=none cterm=none
-hi PmenuSel 
-    \ guifg=#003300 guibg=#00ff00 gui=none 
-    \ ctermbg=46 ctermfg=22 term=none cterm=none
+function geckocomplete#setup_pmenu_highlight() abort
+  hi Pmenu
+      \ guifg=#00ff00 guibg=#003300 gui=none
+      \ ctermbg=22 ctermfg=46 term=none cterm=none
+  hi PmenuSel 
+      \ guifg=#003300 guibg=#00ff00 gui=none
+      \ ctermbg=46 ctermfg=22 term=none cterm=none
+endfunction
 
 call geckocomplete#init()
 

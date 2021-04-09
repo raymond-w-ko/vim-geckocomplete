@@ -30,7 +30,11 @@ def iskeyword_to_ords(iskeyword):
         if tok == "@":
             continue
         if "-" not in tok or tok == "-":
-            valid_ords[ord(tok)] = should_include
+            if tok.isdigit():
+                x = int(tok)
+            else:
+                x = ord(tok)
+            valid_ords[x] = should_include
         elif tok == "":
             # artifact of parsing a comma
             comma_ord = ord(",")
@@ -39,12 +43,12 @@ def iskeyword_to_ords(iskeyword):
             _range = tok.split("-")
 
             a = _range[0]
+            b = _range[1]
             if a.isdigit():
                 a = int(a)
             else:
                 a = ord(a)
 
-            b = _range[1]
             if b.isdigit():
                 b = int(b)
             else:

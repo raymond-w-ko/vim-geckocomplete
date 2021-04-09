@@ -12,7 +12,7 @@ augroup geckocomplete
   " autocmd TextChangedP *  call geckocomplete#completion_timer_start(1)
 
   autocmd BufDelete * call geckocomplete#delete_current_buffer()
-  autocmd BufReadPost * call geckocomplete#setup_pmenu_highlight()
+  autocmd BufEnter * call geckocomplete#setup_pmenu_highlight()
 augroup END
 
 inoremap <silent><nowait> <Plug>(geckocomplete) <c-x><c-u>

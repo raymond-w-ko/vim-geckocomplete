@@ -28,8 +28,12 @@ function geckocomplete#completefunc(findstart, base) abort
 endfunction
 
 function s:trigger_pmenu() abort
+  if mode() != 'i' | return | endif
+
   " always bash this, plugins like clojure-vim/clojure.vim sets this
-  setlocal completefunc=geckocomplete#completefunc
+  " setlocal completefunc=geckocomplete#completefunc
+
+  " let s:pmenu_first_time = 1
 
   " due to the various plugins overriding these settings, always bash this
   if !exists("b:geckocomplete_buffer_setup")
@@ -40,8 +44,10 @@ function s:trigger_pmenu() abort
     setlocal completeopt+=noinsert
     let b:geckocomplete_buffer_setup = 1
   endif
-  let s:pmenu_first_time = 1
-  call feedkeys("\<Plug>(geckocomplete)", "i")
+  " call feedkeys("\<plug>(geckocomplete)", "i")
+
+  let [findstart, completions] = Geckocomplete_get_completions()
+  call complete(findstart + 1, completions)
 endfunction
 
 " no neovim support

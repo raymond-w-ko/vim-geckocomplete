@@ -15,7 +15,7 @@ augroup geckocomplete
   autocmd BufEnter * call geckocomplete#setup_pmenu_highlight()
 augroup END
 
-inoremap <silent><nowait> <Plug>(geckocomplete) <c-x><c-u>
+inoremap <silent><nowait> <plug>(geckocomplete) <c-x><c-u>
 
 let n = strlen(g:geckocomplete_quick_select_keys) - 1
 for i in range(0, n, 1)

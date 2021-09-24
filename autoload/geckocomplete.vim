@@ -1,5 +1,6 @@
 let s:pause_completion = 0
 let s:pmenu_first_time = 0
+let s:popup_visible = 0
 let s:completions = []
 
 function geckocomplete#init() abort
@@ -8,12 +9,12 @@ endfunction
 function geckocomplete#completefunc(findstart, base) abort
   if a:findstart
     " do below to avoid immediate recompletion after BS, only after a delay
-    if !s:pmenu_first_time && g:geckocomplete_completion_delay > 0
-      call geckocomplete#completion_timer_start(0)
-      return -2
-    else
-      let s:pmenu_first_time = 0
-    endif
+    " if !s:pmenu_first_time && g:geckocomplete_completion_delay > 0
+    "   call geckocomplete#completion_timer_start(0)
+    "   return -2
+    " else
+    "   let s:pmenu_first_time = 0
+    " endif
 
     let x = Geckocomplete_get_completions()
     let [findstart, completions] = x
@@ -47,7 +48,13 @@ function s:trigger_pmenu() abort
   " call feedkeys("\<plug>(geckocomplete)", "i")
 
   let [findstart, completions] = Geckocomplete_get_completions()
-  call complete(findstart + 1, completions)
+
+  if !s:popup_visible
+    call complete(findstart + 1, completions)
+  endif
+  if len(completions) > 0
+    let s:popup_visible = 1
+  endif
 endfunction
 
 " no neovim support
@@ -59,6 +66,10 @@ function s:completion_begin() abort
   call s:trigger_pmenu()
 endfunction
 
+fun! geckocomplete#completion_done() abort
+  let s:popup_visible = 0
+endf
+
 """"""""""""""""""""""""""""""""""""""""
 
 function! s:completion_timer_stop() abort
@@ -69,14 +80,13 @@ function! s:completion_timer_stop() abort
   unlet s:completion_timer
 endfunction
 
-function! geckocomplete#completion_timer_start(delay_only) abort
+function! geckocomplete#completion_timer_start(show_now) abort
   call s:completion_timer_stop()
   let delay = g:geckocomplete_completion_delay
 
   if s:pause_completion | return | endif
-  if a:delay_only &&  delay <= 0 | return | endif
 
-  if delay > 0
+  if !a:show_now && delay > 0
     let s:completion_timer = timer_start(delay, {-> s:completion_begin()})
   else
     call s:completion_begin()

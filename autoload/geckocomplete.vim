@@ -1,6 +1,5 @@
 let s:pause_completion = 0
 let s:pmenu_first_time = 0
-let s:popup_visible = 0
 let s:completions = []
 
 function geckocomplete#init() abort
@@ -29,7 +28,7 @@ function geckocomplete#completefunc(findstart, base) abort
 endfunction
 
 function s:trigger_pmenu() abort
-  if mode() != 'i' | return | endif
+  if mode()[0] != 'i' | return | endif
 
   " always bash this, plugins like clojure-vim/clojure.vim sets this
   " setlocal completefunc=geckocomplete#completefunc
@@ -48,13 +47,7 @@ function s:trigger_pmenu() abort
   " call feedkeys("\<plug>(geckocomplete)", "i")
 
   let [findstart, completions] = Geckocomplete_get_completions()
-
-  if !s:popup_visible
-    call complete(findstart + 1, completions)
-  endif
-  if len(completions) > 0
-    let s:popup_visible = 1
-  endif
+  call complete(findstart + 1, completions)
 endfunction
 
 " no neovim support
@@ -66,9 +59,6 @@ function s:completion_begin() abort
   call s:trigger_pmenu()
 endfunction
 
-fun! geckocomplete#completion_done() abort
-  let s:popup_visible = 0
-endf
 
 """"""""""""""""""""""""""""""""""""""""
 

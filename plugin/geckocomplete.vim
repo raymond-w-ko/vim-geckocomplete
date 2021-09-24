@@ -6,14 +6,11 @@ let g:geckocomplete_completion_delay =
 
 augroup geckocomplete
   au!
-  autocmd CursorMovedI * call geckocomplete#completion_done()
-  " autocmd InsertEnter *  call geckocomplete#completion_timer_start(0)
   autocmd TextChangedI * call geckocomplete#completion_timer_start(1)
   autocmd TextChangedP *  call geckocomplete#completion_timer_start(1)
-  autocmd CompleteDone * call geckocomplete#completion_done()
 
-  autocmd BufDelete * call geckocomplete#delete_current_buffer()
   autocmd BufEnter * call geckocomplete#setup_pmenu_highlight()
+  autocmd BufDelete * call geckocomplete#delete_current_buffer()
 augroup END
 
 inoremap <silent><nowait> <plug>(geckocomplete) <c-x><c-u>

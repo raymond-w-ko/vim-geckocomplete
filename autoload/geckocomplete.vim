@@ -97,6 +97,10 @@ function geckocomplete#toggle_pause_completion()
   endif
 endfunction
 
+fun! geckocomplete#unpause_completion() abort
+  let s:pause_completion = 0
+endf
+
 " The buffer number must be retrieved via VimScript, otherwise it is too late
 " to do it in the plugin.
 function! geckocomplete#delete_current_buffer() abort

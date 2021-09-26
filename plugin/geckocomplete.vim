@@ -11,6 +11,8 @@ augroup geckocomplete
 
   autocmd BufEnter * call geckocomplete#setup_pmenu_highlight()
   autocmd BufDelete * call geckocomplete#delete_current_buffer()
+  
+  autocmd InsertLeave * call geckocomplete#unpause_completion()
 augroup END
 
 inoremap <silent><nowait> <plug>(geckocomplete) <c-x><c-u>

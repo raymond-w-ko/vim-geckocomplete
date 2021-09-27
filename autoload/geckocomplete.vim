@@ -119,8 +119,18 @@ function! geckocomplete#completion_key() abort
   endif
 endfunction
 
+fun! s:resume_completion_soon() abort
+  if exists("s:resume_completion_timer")
+    call timer_stop(s:resume_completion_timer)
+  endif
+  let s:resume_completion_timer = timer_start(1000, {-> geckocomplete#unpause_completion()})
+endf
+
+" assume these are numbers
 function! geckocomplete#quick_select(key, index)
   if !pumvisible()
+    let s:pause_completion = 1
+    call s:resume_completion_soon()
     return a:key
   else
     let keys = ""

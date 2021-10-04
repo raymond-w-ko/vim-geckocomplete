@@ -164,6 +164,7 @@ class Geckocomplete:
             buffer_snapshot["read-from-disk"] = False
             self.to_server(["merge-buffer", buffer_snapshot])
             if n_bites > 0:
+                log("sending num bytes: " + str(n_bites))
                 self.to_server_raw(bites)
 
     def delete_buffer(self, bufnum):

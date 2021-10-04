@@ -7,7 +7,7 @@
              "-XX:+UnlockDiagnosticVMOptions"
              "-XX:+DebugNonSafepoints"
              "-XX:-OmitStackTraceInFastThrow"]
-  :dependencies [[org.clojure/clojure "1.10.1"]]
+  :dependencies [[org.clojure/clojure "1.10.3"]]
   :main ^:skip-aot geckocomplete.core
   :target-path "target/%s"
   :plugins [[lein-tools-deps "0.4.5"]
@@ -15,4 +15,5 @@
   :middleware [lein-tools-deps.plugin/resolve-dependencies-with-deps-edn]
   :java-source-paths ["src/java"]
   :lein-tools-deps/config {:config-files [:project]}
+  :javac-options ["-target" "1.8" "-source" "1.8" "-Xlint:-options"]
   :profiles {:uberjar {:aot :all}})

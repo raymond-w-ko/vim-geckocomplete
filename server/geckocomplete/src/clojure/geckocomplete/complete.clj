@@ -2,12 +2,7 @@
   (:import
    [geckocomplete Algorithm])
   (:require
-   [clojure.string :as str]
-   [clojure.core.async :as async :refer [<! >! <!! >!! to-chan! pipeline chan]]
    [clojure.test :as test :refer [deftest is]]
-   [clojure.java.io :as io]
-   [clojure.core.async :refer [<! >! <!! >!! to-chan!]]
-   [clojure.data.json :as json]
    [com.climate.claypoole :as cp]
    [taoensso.timbre :as timbre
     :refer [log  trace  debug  info  warn  error  fatal  report

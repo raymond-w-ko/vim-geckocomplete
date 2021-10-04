@@ -21,35 +21,19 @@
   (:gen-class))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(set! *warn-on-reflection* true)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; (defonce _0 (tufte/add-basic-println-handler!
 ;              {:format-pstats-opts {:columns [:n-calls :p50 :mean :clock :total]
 ;                                    :format-id-fn name}}))
-(def socket-filename "geckocomplete.sock")
+(def ^String socket-filename "geckocomplete.sock")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn read-n-bytes [input-stream n]
-  (let [buf (byte-array n)]
-    (loop [i 0
-           need-to-read n]
-      (let [num-read (.read input-stream buf i need-to-read)
-            i (+ i num-read)
-            need-to-read (- n i)]
-        (if (> 0 need-to-read)
-          (recur i need-to-read)
-          buf)))))
-
-(defn read-n-chars [in-reader n]
-  (let [cbuf (char-array n)]
-    (loop [i 0
-           need-to-read n]
-      (let [num-read (.read in-reader cbuf i need-to-read)
-            i (+ i num-read)
-            need-to-read (- n i)]
-        (if (> 0 need-to-read)
-          (recur i need-to-read)
-          cbuf)))))
+(defn read-n-bytes [^java.io.InputStream input-stream
+                    n]
+  (.readNBytes input-stream n))
 
 (defn unmerge-words [global-words words]
   (letfn [(rf [m word]
@@ -115,9 +99,11 @@
 
 (defn get-buffer-text [in-stream
                        {:as op-args :keys [num-bytes buffer-path read-from-disk]}]
+  (debug "attempting to read buffer text inline: " num-bytes)
   (cond
    read-from-disk (slurp buffer-path :encoding "UTF-8")
-   (< 0 num-bytes) (let [bites (read-n-bytes in-stream num-bytes)]
+   (< 0 num-bytes) (let [^bytes bites (read-n-bytes in-stream num-bytes)]
+                     (debugf "read %d bytes" (count bites))
                      (new String bites StandardCharsets/UTF_8))
    :else ""))
 
@@ -130,17 +116,24 @@
     (debug "merge-buffer" buffer-id buffer-path)
     (send state merge-buffer op-args)))
 
-(defn handle-connection [sock]
+(defn handle-connection [^java.net.Socket sock]
   (let [in-stream (.getInputStream sock)
         out-stream (.getOutputStream sock)
         out-writer (OutputStreamWriter. out-stream "UTF-8")
-        read-next-cmd (fn []
-                        (let [n (-> (read-n-bytes in-stream 4)
-                                    (ByteBuffer/wrap)
-                                    (.getInt))
-                              msg-as-bytes (read-n-bytes in-stream n)]
-                          (-> (new String msg-as-bytes StandardCharsets/UTF_8)
-                              (json/read-str :key-fn keyword))))
+        read-next-cmd
+        (fn []
+          (let [n (-> (read-n-bytes in-stream 4)
+                      (ByteBuffer/wrap)
+                      (.getInt))
+                ^bytes msg-as-bytes (read-n-bytes in-stream n)
+                cmd-str (new String msg-as-bytes StandardCharsets/UTF_8)]
+            (debug cmd-str)
+            (json/read-str cmd-str :key-fn keyword)))
+        read-next-cmd-or-exit (fn []
+                                (try
+                                 (read-next-cmd)
+                                 (catch Exception e
+                                   ["exit" ""])))
         write-json (fn [obj]
                      (let [s (json/write-str obj)
                            bites (.getBytes s "UTF-8")
@@ -155,7 +148,7 @@
                       :words {}})]
     (debug "accepted a connection")
     (try
-     (loop [[op op-args] (read-next-cmd)]
+     (loop [[op op-args] (read-next-cmd-or-exit)]
        (case op
          "quit" (debug "quit")
          "exit" (debug "exit")
@@ -171,7 +164,7 @@
            (write-json completions))
          (errorf "UNKNOWN CMD: %s %s" (pr-str op) (pr-str op-args)))
        (when-not (contains? #{"quit" "exit"} op)
-         (recur (read-next-cmd))))
+         (recur (read-next-cmd-or-exit))))
      (catch java.io.EOFException e
        (error "EOF received")))
     (debug "closing connection")
@@ -180,6 +173,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn server-loop []
+  (timbre/merge-config! {:min-level :warn})
   (debug "deleting existing socket file:" socket-filename)
   (io/delete-file socket-filename true)
 

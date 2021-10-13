@@ -9,7 +9,7 @@ augroup geckocomplete
   autocmd TextChangedI * call geckocomplete#completion_timer_start(1)
   " autocmd TextChangedP *  call geckocomplete#completion_timer_start(1)
 
-  autocmd BufEnter * call geckocomplete#setup_pmenu_highlight()
+  " autocmd BufEnter * call geckocomplete#setup_pmenu_highlight()
   autocmd BufDelete * call geckocomplete#delete_current_buffer()
   
   autocmd InsertLeave * call geckocomplete#unpause_completion()

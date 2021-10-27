@@ -57,6 +57,7 @@ endfunction
 function s:completion_begin() abort
   call s:completion_timer_stop()
   if &paste | return | endif
+  if has_key(g:geckocomplete_disable_filetype, &ft) | return | endif
   call s:trigger_pmenu()
 endfunction
 

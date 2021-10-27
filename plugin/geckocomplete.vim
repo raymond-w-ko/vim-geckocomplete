@@ -1,8 +1,11 @@
 let g:geckocomplete_quick_select_keys =
-    \ get(g:, "geckocomplete_quick_select_keys", "1234567890")
+      \ get(g:, "geckocomplete_quick_select_keys", "1234567890")
 
 let g:geckocomplete_completion_delay =
-    \ get(g:, "geckocomplete_completion_delay", 350)
+      \ get(g:, "geckocomplete_completion_delay", 350)
+
+let g:geckocomplete_disable_filetype =
+      \ get(g:, "geckocomplete_disable_filetype", {"TelescopePrompt": 1})
 
 augroup geckocomplete
   au!
@@ -28,11 +31,11 @@ endfor
 
 function geckocomplete#setup_pmenu_highlight() abort
   hi Pmenu
-      \ guifg=#00ff00 guibg=#003300 gui=none
-      \ ctermbg=22 ctermfg=46 term=none cterm=none
+        \ guifg=#00ff00 guibg=#003300 gui=none
+        \ ctermbg=22 ctermfg=46 term=none cterm=none
   hi PmenuSel 
-      \ guifg=#003300 guibg=#00ff00 gui=none
-      \ ctermbg=46 ctermfg=22 term=none cterm=none
+        \ guifg=#003300 guibg=#00ff00 gui=none
+        \ ctermbg=46 ctermfg=22 term=none cterm=none
 endfunction
 
 call geckocomplete#init()

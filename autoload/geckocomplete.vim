@@ -1,5 +1,7 @@
 let s:pause_completion = 0
 let s:pmenu_first_time = 0
+let s:use_existing_completions = 0
+let s:findstart = -3
 let s:completions = []
 
 function geckocomplete#init() abort
@@ -15,10 +17,15 @@ function geckocomplete#completefunc(findstart, base) abort
     "   let s:pmenu_first_time = 0
     " endif
 
-    let x = Geckocomplete_get_completions()
-    let [findstart, completions] = x
-    let s:completions = completions
-    return findstart
+    if s:use_existing_completions
+      let s:use_existing_completions = 0
+      return s:findstart
+    else
+      let x = Geckocomplete_get_completions()
+      let [findstart, completions] = x
+      let s:completions = completions
+      return findstart
+    endif
   else
     return {
         \ "words": s:completions,
@@ -45,7 +52,14 @@ function s:trigger_pmenu() abort
     let b:geckocomplete_buffer_setup = 1
   endif
 
-  call feedkeys("\<plug>(geckocomplete)", "i")
+    let x = Geckocomplete_get_completions()
+    let [findstart, completions] = x
+    if len(completions) > 0
+      let s:findstart = findstart
+      let s:completions = completions
+      let s:use_existing_completions = 1
+      call feedkeys("\<plug>(geckocomplete)", "n")
+    endif
 
   " let [findstart, completions] = Geckocomplete_get_completions()
   " call complete(findstart + 1, completions)

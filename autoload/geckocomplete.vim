@@ -1,6 +1,7 @@
 let s:pause_completion = 0
 let s:pmenu_first_time = 0
 let s:use_existing_completions = 0
+let s:pum_tick = 0
 let s:findstart = -3
 let s:completions = []
 
@@ -16,6 +17,8 @@ function geckocomplete#completefunc(findstart, base) abort
     " else
     "   let s:pmenu_first_time = 0
     " endif
+
+    let s:pum_tick += 1
 
     if s:use_existing_completions
       let s:use_existing_completions = 0
@@ -58,6 +61,7 @@ function s:trigger_pmenu() abort
       let s:findstart = findstart
       let s:completions = completions
       let s:use_existing_completions = 1
+      let s:pum_tick = 0
       call feedkeys("\<plug>(geckocomplete)", "n")
     endif
 
@@ -96,6 +100,14 @@ function! geckocomplete#completion_timer_start(show_now) abort
     let s:completion_timer = timer_start(delay, {-> s:completion_begin()})
   else
     call s:completion_begin()
+  endif
+endfunction
+
+function! geckocomplete#dismiss_popup_and_retry_later() abort
+  if pumvisible() && s:pum_tick > 1
+    call feedkeys("\<c-e>", "n")
+    let s:pum_tick = 0
+    call geckocomplete#completion_timer_start(0)
   endif
 endfunction
 

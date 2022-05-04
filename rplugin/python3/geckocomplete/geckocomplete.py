@@ -201,8 +201,8 @@ class Geckocomplete:
 
         buf = self.vim.current.buffer
         complete_request = [buf.number, row, findstart, word]
-        if self.last_complete_request == complete_request:
-            return [-2, []]
+        # if self.last_complete_request == complete_request:
+        #     return [-2, []]
         self.last_complete_request = complete_request
 
         # log("completion:%d:%s:" % (findstart, word))

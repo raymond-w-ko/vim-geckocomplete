@@ -10,7 +10,7 @@ let g:geckocomplete_disable_filetype =
 augroup geckocomplete
   au!
   autocmd TextChangedI * call geckocomplete#completion_timer_start(0)
-  " autocmd TextChangedP *  call geckocomplete#completion_timer_start(1)
+  autocmd TextChangedP * call geckocomplete#dismiss_popup_and_retry_later()
 
   " autocmd BufEnter * call geckocomplete#setup_pmenu_highlight()
   autocmd BufDelete * call geckocomplete#delete_current_buffer()

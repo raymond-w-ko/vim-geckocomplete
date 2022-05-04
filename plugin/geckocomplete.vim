@@ -2,14 +2,14 @@ let g:geckocomplete_quick_select_keys =
       \ get(g:, "geckocomplete_quick_select_keys", "1234567890")
 
 let g:geckocomplete_completion_delay =
-      \ get(g:, "geckocomplete_completion_delay", 350)
+      \ get(g:, "geckocomplete_completion_delay", 333)
 
 let g:geckocomplete_disable_filetype =
       \ get(g:, "geckocomplete_disable_filetype", {"TelescopePrompt": 1})
 
 augroup geckocomplete
   au!
-  autocmd TextChangedI * call geckocomplete#completion_timer_start(1)
+  autocmd TextChangedI * call geckocomplete#completion_timer_start(0)
   " autocmd TextChangedP *  call geckocomplete#completion_timer_start(1)
 
   " autocmd BufEnter * call geckocomplete#setup_pmenu_highlight()

@@ -2,7 +2,7 @@ let g:geckocomplete_quick_select_keys =
       \ get(g:, "geckocomplete_quick_select_keys", "1234567890")
 
 let g:geckocomplete_completion_delay =
-      \ get(g:, "geckocomplete_completion_delay", 333)
+      \ get(g:, "geckocomplete_completion_delay", 500)
 
 let g:geckocomplete_disable_filetype =
       \ get(g:, "geckocomplete_disable_filetype", {"TelescopePrompt": 1})

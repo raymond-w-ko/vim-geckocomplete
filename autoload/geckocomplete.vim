@@ -57,11 +57,11 @@ function s:trigger_pmenu() abort
 
     let x = Geckocomplete_get_completions()
     let [findstart, completions] = x
+    let s:pum_tick = 0
     if len(completions) > 0
       let s:findstart = findstart
       let s:completions = completions
       let s:use_existing_completions = 1
-      let s:pum_tick = 0
       call feedkeys("\<plug>(geckocomplete)", "n")
     endif
 
